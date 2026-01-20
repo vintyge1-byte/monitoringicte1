@@ -54,6 +54,7 @@ th {
     <input id="username" placeholder="Username"><br>
     <input id="password" type="password" placeholder="Password"><br>
     <button onclick="login()">Login</button>
+    <button onclick="exportToExcel()">Export to Excel</button>
     <p id="error" style="color:red;"></p>
 </div>
 
@@ -106,6 +107,42 @@ function saveLogbook(data) {
     localStorage.setItem("logbook", JSON.stringify(data));
 }
 
+function getExcelTime() {
+    const d = new Date();
+    return d.getHours().toString().padStart(2, "0") + ":" +
+           d.getMinutes().toString().padStart(2, "0") + ":" +
+           d.getSeconds().toString().padStart(2, "0");
+}
+
+function exportToExcel() {
+    const logbook = JSON.parse(localStorage.getItem("logbook")) || {};
+    const selectedDate = document.getElementById("datePicker").value;
+
+    if (!logbook[selectedDate]) {
+        alert("No records found for this date.");
+        return;
+    }
+
+    let csvContent = "Student ID,Time In,Time Out\n";
+
+    for (let studentId in logbook[selectedDate]) {
+        const record = logbook[selectedDate][studentId];
+        csvContent += studentId + "," + record.timeIn + "," + record.timeOut + "\n";
+    }
+
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "QR_Logbook_" + selectedDate + ".csv";
+    document.body.appendChild(link);
+    link.click();
+
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
 /* ================= SOUND ================= */
 function playBeep() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -146,6 +183,7 @@ function showAdmin() {
 }
 
 /* ================= QR SCAN ================= */
+
 function onScanSuccess(qrMessage) {
     const now = Date.now();
     if (now - lastScanTime < SCAN_DELAY) return;
@@ -153,19 +191,19 @@ function onScanSuccess(qrMessage) {
 
     playBeep();
 
-    const time = new Date().toLocaleTimeString();
-    const logbook = getLogbook();
-    const todayKey = today;
+    const time = getExcelTime();   // ✅ FIXED HERE
+    const logbook = JSON.parse(localStorage.getItem("logbook")) || {};
+    const date = document.getElementById("datePicker").value;
 
-    if (!logbook[todayKey]) logbook[todayKey] = {};
+    if (!logbook[date]) logbook[date] = {};
 
-    if (!logbook[todayKey][qrMessage]) {
-        logbook[todayKey][qrMessage] = { timeIn: time, timeOut: "" };
-    } else if (!logbook[todayKey][qrMessage].timeOut) {
-        logbook[todayKey][qrMessage].timeOut = time;
+    if (!logbook[date][qrMessage]) {
+        logbook[date][qrMessage] = { timeIn: time, timeOut: "" };
+    } else if (!logbook[date][qrMessage].timeOut) {
+        logbook[date][qrMessage].timeOut = time;
     }
 
-    saveLogbook(logbook);
+    localStorage.setItem("logbook", JSON.stringify(logbook));
     loadTable();
 }
 
