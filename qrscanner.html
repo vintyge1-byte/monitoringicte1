@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ICT E1 QR Time Monitoring System</title>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    text-align: center;
+}
+.hidden { display: none; }
+input, button {
+    padding: 8px;
+    margin: 5px;
+}
+table {
+    width: 90%;
+    margin: auto;
+    border-collapse: collapse;
+}
+th, td {
+    border: 1px solid black;
+    padding: 8px;
+}
+th {
+    background-color: green;
+}
+#reader {
+    width: 320px;
+    margin: auto;
+}
+.logo-container {
+    text-align: center;
+    margin: 15px 0;
+}
+
+.school-logo {
+    width: 120px;
+    max-width: 80%;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOGIN -->
+<div id="loginPage">
+  <div class="logo-container">
+    <img src="logo.png" alt="School Logo" class="school-logo">
+</div>
+    <h2>Admin Login</h2>
+    <input id="username" placeholder="Username"><br>
+    <input id="password" type="password" placeholder="Password"><br>
+    <button onclick="login()">Login</button>
+    <p id="error" style="color:red;"></p>
+</div>
+
+<!-- ADMIN -->
+<div id="adminPage" class="hidden">
+    <h2>Student Time Monitoring</h2>
+
+    <!-- CALENDAR -->
+    <label><strong>Select Date:</strong></label>
+    <input type="date" id="datePicker">
+
+    <br><br>
+
+    <button onclick="logout()">Logout</button>
+
+    <div id="reader"></div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Student ID</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+            </tr>
+        </thead>
+        <tbody id="records"></tbody>
+    </table>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const ADMIN_USER = "Research";
+const ADMIN_PASS = "AABDHJJJJJRV";
+const SCAN_DELAY = 3000;
+
+/* ================= GLOBALS ================= */
+let html5QrCode;
+let lastScanTime = 0;
+
+/* ================= DATE ================= */
+const today = new Date().toISOString().split("T")[0];
+const datePicker = document.getElementById("datePicker");
+datePicker.value = today;
+
+/* ================= STORAGE ================= */
+function getLogbook() {
+    return JSON.parse(localStorage.getItem("logbook")) || {};
+}
+function saveLogbook(data) {
+    localStorage.setItem("logbook", JSON.stringify(data));
+}
+
+/* ================= SOUND ================= */
+function playBeep() {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.frequency.value = 1000;
+    gain.gain.value = 0.2;
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+}
+
+/* ================= LOGIN ================= */
+function login() {
+    if (username.value === ADMIN_USER && password.value === ADMIN_PASS) {
+        localStorage.setItem("loggedIn", "true");
+        showAdmin();
+    } else {
+        error.innerText = "Invalid login!";
+    }
+}
+
+function logout() {
+    localStorage.removeItem("loggedIn");
+    stopScanner();
+    location.reload();
+}
+
+function showAdmin() {
+    loginPage.classList.add("hidden");
+    adminPage.classList.remove("hidden");
+    loadTable();
+    startScanner();
+}
+
+/* ================= QR SCAN ================= */
+function onScanSuccess(qrMessage) {
+    const now = Date.now();
+    if (now - lastScanTime < SCAN_DELAY) return;
+    lastScanTime = now;
+
+    playBeep();
+
+    const time = new Date().toLocaleTimeString();
+    const logbook = getLogbook();
+    const todayKey = today;
+
+    if (!logbook[todayKey]) logbook[todayKey] = {};
+
+    if (!logbook[todayKey][qrMessage]) {
+        logbook[todayKey][qrMessage] = { timeIn: time, timeOut: "" };
+    } else if (!logbook[todayKey][qrMessage].timeOut) {
+        logbook[todayKey][qrMessage].timeOut = time;
+    }
+
+    saveLogbook(logbook);
+    loadTable();
+}
+
+/* ================= TABLE ================= */
+function loadTable() {
+    const logbook = getLogbook();
+    const selectedDate = datePicker.value;
+    records.innerHTML = "";
+
+    if (!logbook[selectedDate]) return;
+
+    for (let id in logbook[selectedDate]) {
+        const r = logbook[selectedDate][id];
+        records.innerHTML += `
+        <tr>
+            <td>${id}</td>
+            <td>${r.timeIn}</td>
+            <td>${r.timeOut}</td>
+        </tr>`;
+    }
+}
+
+datePicker.addEventListener("change", loadTable);
+
+/* ================= SCANNER ================= */
+function startScanner() {
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        onScanSuccess
+    );
+}
+
+function stopScanner() {
+    if (html5QrCode) html5QrCode.stop().catch(()=>{});
+}
+
+/* ================= AUTO LOGIN ================= */
+if (localStorage.getItem("loggedIn") === "true") {
+    showAdmin();
+}
+</script>
+
+</body>
+</html>
