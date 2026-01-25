@@ -6,36 +6,79 @@
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
+/* BACKGROUND */
 body {
     font-family: Arial, sans-serif;
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #dbeafe, #f8fafc);
     text-align: center;
 }
-.hidden { display: none; }
-input, button {
-    padding: 8px;
-    margin: 5px;
-}
-table {
+
+/* CARD LAYOUT */
+#loginPage, #adminPage {
+    background: white;
     width: 90%;
-    margin: auto;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.hidden {
+    display: none;
+}
+
+/* INPUTS & BUTTONS */
+input, button {
+    padding: 10px;
+    margin: 6px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+button {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #1e40af;
+}
+
+/* TABLE */
+table {
+    width: 100%;
+    margin-top: 20px;
     border-collapse: collapse;
 }
+
 th, td {
-    border: 1px solid black;
-    padding: 8px;
+    border: 1px solid #ddd;
+    padding: 10px;
 }
+
 th {
-    background-color: #f2f2f2;
+    background-color: #f1f5f9;
 }
+
+/* QR */
 #reader {
     width: 320px;
-    margin: auto;
+    margin: 20px auto;
 }
+
+/* LOGO */
 .logo-container {
-    margin: 15px 0;
+    margin-bottom: 15px;
 }
+
 .school-logo {
-    width: 120px;
+    width: 110px;
 }
 </style>
 </head>
@@ -57,7 +100,11 @@ th {
 
 <!-- ADMIN PAGE -->
 <div id="adminPage" class="hidden">
-    <h2>ICT E1 Students Time Monitoring</h2>
+    <div class="logo-container">
+        <img src="logo.png" class="school-logo">
+    </div>
+
+    <h2>ICT E1 QR Time Monitoring</h2>
 
     <label><strong>Select Date:</strong></label>
     <input type="date" id="datePicker"><br><br>
@@ -80,17 +127,17 @@ th {
 </div>
 
 <script>
-/* ================= CONFIG ================= */
+/* CONFIG */
 const ADMIN_USER = "Researchers";
 const ADMIN_PASS = "AABDHJJJJJMRV";
-const CLASS_CODE = "ICTE1";       // 🔒 ONLY VALID QR
+const CLASS_CODE = "ICTE1";
 const SCAN_DELAY = 3000;
 
-/* ================= GLOBALS ================= */
+/* GLOBALS */
 let html5QrCode;
 let lastScanTime = 0;
 
-/* ================= STORAGE ================= */
+/* STORAGE */
 function getLogbook() {
     return JSON.parse(localStorage.getItem("logbook")) || {};
 }
@@ -98,7 +145,7 @@ function saveLogbook(data) {
     localStorage.setItem("logbook", JSON.stringify(data));
 }
 
-/* ================= TIME (EXCEL SAFE) ================= */
+/* TIME */
 function getExcelTime() {
     const d = new Date();
     return `${d.getHours().toString().padStart(2,"0")}:` +
@@ -106,7 +153,7 @@ function getExcelTime() {
            `${d.getSeconds().toString().padStart(2,"0")}`;
 }
 
-/* ================= BEEP ================= */
+/* BEEP */
 function playBeep() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
@@ -119,16 +166,16 @@ function playBeep() {
     osc.stop(ctx.currentTime + 0.15);
 }
 
-/* ================= LOGIN ================= */
+/* LOGIN */
 function login() {
     if (
-        document.getElementById("username").value === ADMIN_USER &&
-        document.getElementById("password").value === ADMIN_PASS
+        username.value === ADMIN_USER &&
+        password.value === ADMIN_PASS
     ) {
         localStorage.setItem("loggedIn", "true");
         showAdmin();
     } else {
-        document.getElementById("error").innerText = "Invalid login!";
+        error.innerText = "Invalid login!";
     }
 }
 
@@ -139,8 +186,8 @@ function logout() {
 }
 
 function showAdmin() {
-    document.getElementById("loginPage").classList.add("hidden");
-    document.getElementById("adminPage").classList.remove("hidden");
+    loginPage.classList.add("hidden");
+    adminPage.classList.remove("hidden");
 
     document.getElementById("datePicker").value =
         new Date().toISOString().split("T")[0];
@@ -149,7 +196,7 @@ function showAdmin() {
     startScanner();
 }
 
-/* ================= QR SCAN ================= */
+/* QR SCAN */
 function onScanSuccess(qrMessage) {
     const now = Date.now();
     if (now - lastScanTime < SCAN_DELAY) return;
@@ -157,7 +204,6 @@ function onScanSuccess(qrMessage) {
 
     const text = qrMessage.trim();
 
-    // 🔒 VALIDATE QR FORMAT
     if (!text.includes("|")) {
         alert("Invalid QR Code");
         return;
@@ -173,7 +219,7 @@ function onScanSuccess(qrMessage) {
 
     const name = parts[1].trim();
     const time = getExcelTime();
-    const date = document.getElementById("datePicker").value;
+    const date = datePicker.value;
     const logbook = getLogbook();
 
     if (!logbook[date]) logbook[date] = {};
@@ -188,11 +234,10 @@ function onScanSuccess(qrMessage) {
     loadTable();
 }
 
-/* ================= TABLE ================= */
+/* TABLE */
 function loadTable() {
     const logbook = getLogbook();
-    const date = document.getElementById("datePicker").value;
-    const records = document.getElementById("records");
+    const date = datePicker.value;
     records.innerHTML = "";
 
     if (!logbook[date]) return;
@@ -208,12 +253,12 @@ function loadTable() {
     }
 }
 
-document.getElementById("datePicker")?.addEventListener("change", loadTable);
+datePicker.addEventListener("change", loadTable);
 
-/* ================= EXPORT ================= */
+/* EXPORT */
 function exportToExcel() {
     const logbook = getLogbook();
-    const date = document.getElementById("datePicker").value;
+    const date = datePicker.value;
 
     if (!logbook[date]) {
         alert("No records for this date");
@@ -233,7 +278,7 @@ function exportToExcel() {
     link.click();
 }
 
-/* ================= SCANNER ================= */
+/* SCANNER */
 function startScanner() {
     html5QrCode = new Html5Qrcode("reader");
     html5QrCode.start(
@@ -247,7 +292,7 @@ function stopScanner() {
     if (html5QrCode) html5QrCode.stop().catch(()=>{});
 }
 
-/* ================= AUTO LOGIN ================= */
+/* AUTO LOGIN */
 if (localStorage.getItem("loggedIn") === "true") {
     showAdmin();
 }
