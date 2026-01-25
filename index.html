@@ -3,157 +3,201 @@
 <head>
 <meta charset="UTF-8">
 <title>ICT E1 QR Time Monitoring System</title>
+
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-/* BACKGROUND */
+/* ========== GENERAL BACKGROUND ========== */
 body {
-    font-family: Arial, sans-serif;
     margin: 0;
-    min-height: 100vh;
-    background: linear-gradient(135deg, #dbeafe, #f8fafc);
-    text-align: center;
+    font-family: "Segoe UI", Arial, sans-serif;
+    background:
+        linear-gradient(135deg, #e8f0ff 0%, #f7f9fc 50%, #eef2f7 100%);
 }
 
-/* CARD LAYOUT */
-#loginPage, #adminPage {
-    background: white;
-    width: 90%;
-    max-width: 900px;
-    margin: 40px auto;
-    padding: 25px;
-    border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+/* Soft background overlay */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background:
+        radial-gradient(circle at top left, rgba(59,130,246,0.08), transparent 40%),
+        radial-gradient(circle at bottom right, rgba(16,185,129,0.08), transparent 40%);
+    z-index: -1;
 }
 
-.hidden {
-    display: none;
-}
+.hidden { display: none; }
 
-/* INPUTS & BUTTONS */
 input, button {
-    padding: 10px;
-    margin: 6px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
+    padding: 8px;
+    margin: 5px;
+    border-radius: 4px;
 }
 
 button {
-    background-color: #2563eb;
-    color: white;
-    border: none;
     cursor: pointer;
+    border: none;
+    background: #2563eb;
+    color: white;
 }
 
 button:hover {
-    background-color: #1e40af;
+    background: #1e40af;
 }
 
-/* TABLE */
+/* ========== HEADER ========== */
+.header {
+    display: flex;
+    align-items: center;
+    padding: 15px 25px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.header img {
+    width: 90px;
+}
+
+.header-text {
+    margin-left: 15px;
+    text-align: left;
+}
+
+.header-top {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.header-middle {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.header-bottom {
+    font-size: 13px;
+}
+
+/* ========== CARD STYLE ========== */
+.card {
+    background: white;
+    width: 90%;
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+}
+
+.login-box {
+    max-width: 350px;
+}
+
+/* ========== TABLE ========== */
 table {
     width: 100%;
-    margin-top: 20px;
     border-collapse: collapse;
+    margin-top: 15px;
 }
 
 th, td {
-    border: 1px solid #ddd;
-    padding: 10px;
+    border: 1px solid #cbd5e1;
+    padding: 8px;
+    text-align: center;
 }
 
 th {
-    background-color: #f1f5f9;
+    background: #f1f5f9;
 }
 
-/* QR */
+/* ========== QR ========== */
 #reader {
     width: 320px;
     margin: 20px auto;
-}
-
-/* LOGO */
-.logo-container {
-    margin-bottom: 15px;
-}
-
-.school-logo {
-    width: 110px;
 }
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN PAGE -->
+<!-- ========== LOGIN PAGE ========== -->
 <div id="loginPage">
-    <div class="logo-container">
-        <img src="logo.png" class="school-logo" alt="School Logo">
+    <div class="header">
+        <img src="logo.png" alt="School Logo">
+        <div class="header-text">
+            <div class="header-top">JBEST School of Technology and Practical Skills, Inc.</div>
+            <div class="header-bottom">Cubao, Quezon City</div>
+        </div>
     </div>
 
-    <h2>Admin Login</h2>
-    <input id="username" placeholder="Username"><br>
-    <input id="password" type="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-    <p id="error" style="color:red;"></p>
+    <div class="card login-box">
+        <h2>Admin Login</h2>
+        <input id="username" placeholder="Username"><br>
+        <input id="password" type="password" placeholder="Password"><br>
+        <button onclick="login()">Login</button>
+        <p id="error" style="color:red;"></p>
+    </div>
 </div>
 
-<!-- ADMIN PAGE -->
+<!-- ========== ADMIN PAGE ========== -->
 <div id="adminPage" class="hidden">
-    <div class="logo-container">
-        <img src="logo.png" class="school-logo">
+    <div class="header">
+        <img src="logo.png" alt="School Logo">
+        <div class="header-text">
+            <div class="header-top">JBEST School of Technology and Practical Skills, Inc.</div>
+            <div class="header-bottom">Cubao, Quezon City</div>
+        </div>
     </div>
 
-    <h2>ICT E1 QR Time Monitoring</h2>
+    <div class="card">
+        <h2>Student Time Monitoring</h2>
 
-    <label><strong>Select Date:</strong></label>
-    <input type="date" id="datePicker"><br><br>
+        <div style="text-align:center;">
+            <label><strong>Select Date:</strong></label>
+            <input type="date" id="datePicker"><br><br>
 
-    <button onclick="exportToExcel()">Export to Excel</button>
-    <button onclick="logout()">Logout</button>
+            <button onclick="exportToExcel()">Export to Excel</button>
+            <button onclick="logout()">Logout</button>
+        </div>
 
-    <div id="reader"></div>
+        <div id="reader"></div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Student Name</th>
-                <th>Time In</th>
-                <th>Time Out</th>
-            </tr>
-        </thead>
-        <tbody id="records"></tbody>
-    </table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Time In</th>
+                    <th>Time Out</th>
+                </tr>
+            </thead>
+            <tbody id="records"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
-/* CONFIG */
+/* ========== CONFIG ========== */
 const ADMIN_USER = "Researchers";
 const ADMIN_PASS = "AABDHJJJJJMRV";
-const CLASS_CODE = "ICTE1";
 const SCAN_DELAY = 3000;
 
-/* GLOBALS */
+/* ========== GLOBALS ========== */
 let html5QrCode;
 let lastScanTime = 0;
 
-/* STORAGE */
+/* ========== STORAGE ========== */
 function getLogbook() {
     return JSON.parse(localStorage.getItem("logbook")) || {};
 }
+
 function saveLogbook(data) {
     localStorage.setItem("logbook", JSON.stringify(data));
 }
 
-/* TIME */
-function getExcelTime() {
-    const d = new Date();
-    return `${d.getHours().toString().padStart(2,"0")}:` +
-           `${d.getMinutes().toString().padStart(2,"0")}:` +
-           `${d.getSeconds().toString().padStart(2,"0")}`;
+function getTime() {
+    return new Date().toLocaleTimeString();
 }
 
-/* BEEP */
+/* ========== BEEP SOUND ========== */
 function playBeep() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
@@ -166,7 +210,7 @@ function playBeep() {
     osc.stop(ctx.currentTime + 0.15);
 }
 
-/* LOGIN */
+/* ========== LOGIN ========== */
 function login() {
     if (
         username.value === ADMIN_USER &&
@@ -188,56 +232,38 @@ function logout() {
 function showAdmin() {
     loginPage.classList.add("hidden");
     adminPage.classList.remove("hidden");
-
-    document.getElementById("datePicker").value =
-        new Date().toISOString().split("T")[0];
-
+    datePicker.value = new Date().toISOString().split("T")[0];
     loadTable();
     startScanner();
 }
 
-/* QR SCAN */
-function onScanSuccess(qrMessage) {
+/* ========== QR SCAN ========== */
+function onScanSuccess(qrText) {
     const now = Date.now();
     if (now - lastScanTime < SCAN_DELAY) return;
     lastScanTime = now;
-
-    const text = qrMessage.trim();
-
-    if (!text.includes("|")) {
-        alert("Invalid QR Code");
-        return;
-    }
-
-    const parts = text.split("|");
-    if (parts[0] !== CLASS_CODE || !parts[1]) {
-        alert("Unauthorized QR Code");
-        return;
-    }
-
     playBeep();
 
-    const name = parts[1].trim();
-    const time = getExcelTime();
     const date = datePicker.value;
     const logbook = getLogbook();
+    const time = getTime();
 
     if (!logbook[date]) logbook[date] = {};
 
-    if (!logbook[date][name]) {
-        logbook[date][name] = { timeIn: time, timeOut: "" };
-    } else if (!logbook[date][name].timeOut) {
-        logbook[date][name].timeOut = time;
+    if (!logbook[date][qrText]) {
+        logbook[date][qrText] = { timeIn: time, timeOut: "" };
+    } else if (!logbook[date][qrText].timeOut) {
+        logbook[date][qrText].timeOut = time;
     }
 
     saveLogbook(logbook);
     loadTable();
 }
 
-/* TABLE */
+/* ========== TABLE ========== */
 function loadTable() {
-    const logbook = getLogbook();
     const date = datePicker.value;
+    const logbook = getLogbook();
     records.innerHTML = "";
 
     if (!logbook[date]) return;
@@ -245,40 +271,37 @@ function loadTable() {
     for (let name in logbook[date]) {
         const r = logbook[date][name];
         records.innerHTML += `
-        <tr>
-            <td>${name}</td>
-            <td>${r.timeIn}</td>
-            <td>${r.timeOut}</td>
-        </tr>`;
+            <tr>
+                <td>${name}</td>
+                <td>${r.timeIn}</td>
+                <td>${r.timeOut}</td>
+            </tr>
+        `;
     }
 }
 
 datePicker.addEventListener("change", loadTable);
 
-/* EXPORT */
+/* ========== EXPORT ========== */
 function exportToExcel() {
-    const logbook = getLogbook();
     const date = datePicker.value;
-
-    if (!logbook[date]) {
-        alert("No records for this date");
-        return;
-    }
+    const logbook = getLogbook();
+    if (!logbook[date]) return alert("No records.");
 
     let csv = "Student Name,Time In,Time Out\n";
     for (let name in logbook[date]) {
         const r = logbook[date][name];
-        csv += `"${name}","${r.timeIn}","${r.timeOut}"\n`;
+        csv += `${name},${r.timeIn},${r.timeOut}\n`;
     }
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([csv], { type: "text/csv" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = `QR_Logbook_${date}.csv`;
+    link.download = "QR_Logbook_" + date + ".csv";
     link.click();
 }
 
-/* SCANNER */
+/* ========== SCANNER ========== */
 function startScanner() {
     html5QrCode = new Html5Qrcode("reader");
     html5QrCode.start(
@@ -292,10 +315,8 @@ function stopScanner() {
     if (html5QrCode) html5QrCode.stop().catch(()=>{});
 }
 
-/* AUTO LOGIN */
-if (localStorage.getItem("loggedIn") === "true") {
-    showAdmin();
-}
+/* ========== AUTO LOGIN ========== */
+if (localStorage.getItem("loggedIn") === "true") showAdmin();
 </script>
 
 </body>
