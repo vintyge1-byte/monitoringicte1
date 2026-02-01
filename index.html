@@ -2,29 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ICT E1 QR Time Monitoring System</title>
+<title>ICT E1 QR Time Monitoring</title>
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
-/* ===== BODY BACKGROUND ===== */
 body {
     margin: 0;
-    font-family: "Segoe UI", Arial, sans-serif;
-    background: linear-gradient(to bottom right, #f8fafc, #e2e8f0);
-    min-height: 100vh;
+    font-family: Arial, sans-serif;
+    background: linear-gradient(to bottom right, #eef2ff, #f8fafc);
 }
 
-/* ===== HEADER ===== */
+/* HEADER */
 .header {
     display: flex;
     align-items: center;
-    padding: 18px 25px;
-    background: #ffffff;
+    padding: 15px 25px;
+    background: white;
     border-bottom: 3px solid #2563eb;
 }
 
 .header img {
-    width: 85px;
+    width: 80px;
 }
 
 .header-text {
@@ -32,45 +30,37 @@ body {
 }
 
 .header-text .top {
-    font-size: 14px;
+    font-weight: bold;
+    font-size: 15px;
 }
 
 .header-text .middle {
-    font-size: 18px;
-    font-weight: bold;
-}
-
-.header-text .bottom {
     font-size: 14px;
 }
 
-/* ===== MAIN CARD ===== */
+/* CONTAINER */
 .container {
-    background: rgba(255, 255, 255, 0.95);
-    max-width: 900px;
-    margin: 30px auto;
+    max-width: 1100px;
+    margin: 25px auto;
+    background: white;
     padding: 25px;
-    border-radius: 14px;
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.08);
+    border-radius: 12px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
     text-align: center;
 }
 
-.hidden {
-    display: none;
-}
+.hidden { display: none; }
 
-/* ===== FORM ELEMENTS ===== */
 input, button {
-    padding: 10px;
-    margin: 6px;
-    border-radius: 6px;
-    border: 1px solid #cbd5f5;
+    padding: 8px;
+    margin: 5px;
 }
 
 button {
     background: #2563eb;
     color: white;
     border: none;
+    border-radius: 5px;
     cursor: pointer;
 }
 
@@ -78,31 +68,27 @@ button:hover {
     background: #1e40af;
 }
 
-/* ===== QR ===== */
 #reader {
     width: 320px;
     margin: 20px auto;
 }
 
-/* ===== TABLE ===== */
+/* TABLE */
 table {
     width: 100%;
-    margin-top: 20px;
     border-collapse: collapse;
-    background: white;
-    border-radius: 8px;
-    overflow: hidden;
+    margin-top: 20px;
 }
 
 th {
     background: #2563eb;
     color: white;
-    padding: 10px;
+    padding: 8px;
 }
 
 td {
     padding: 8px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid #ddd;
 }
 </style>
 </head>
@@ -111,8 +97,9 @@ td {
 
 <!-- HEADER -->
 <div class="header">
-    <img src="logo.png" alt="School Logo">
+    <img src="logo.png">
     <div class="header-text">
+        <div class="top">Republic of the Philippines</div>
         <div class="top">JBEST School of Technology and Practical Skills, Inc.</div>
         <div class="middle">Cubao, Quezon City</div>
     </div>
@@ -131,11 +118,10 @@ td {
 <div id="adminPage" class="container hidden">
     <h2>ICT E1 Student Time Monitoring</h2>
 
-    <label><strong>Select Date:</strong></label>
+    <label>Select Date:</label>
     <input type="date" id="datePicker"><br><br>
 
     <button onclick="logout()">Logout</button>
-    <button onclick="exportToExcel()">Export to Excel</button>
 
     <div id="reader"></div>
 
@@ -143,6 +129,12 @@ td {
         <thead>
             <tr>
                 <th>Student Name</th>
+                <th>PC No.</th>
+                <th>Time In</th>
+                <th>Time Out</th>
+
+                <th>Student Name</th>
+                <th>PC No.</th>
                 <th>Time In</th>
                 <th>Time Out</th>
             </tr>
@@ -152,17 +144,15 @@ td {
 </div>
 
 <script>
-/* ===== CONFIG ===== */
+/* CONFIG */
 const ADMIN_USER = "Researchers";
 const ADMIN_PASS = "AABDHJJJJJMRV";
-const SECTION_PREFIX = "ICTE1 ";
-const SCAN_DELAY = 3000;
+const PREFIX = "ICTE1 ";
+const SCAN_DELAY = 3000; // 3 seconds delay
 
-/* ===== GLOBAL ===== */
-let html5QrCode;
-let lastScan = 0;
+let lastScanTime = 0;
 
-/* ===== STORAGE ===== */
+/* STORAGE */
 function getLogbook() {
     return JSON.parse(localStorage.getItem("logbook")) || {};
 }
@@ -170,8 +160,8 @@ function saveLogbook(data) {
     localStorage.setItem("logbook", JSON.stringify(data));
 }
 
-/* ===== BEEP ===== */
-function playBeep() {
+/* BEEP */
+function beep() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
     osc.frequency.value = 1000;
@@ -180,7 +170,7 @@ function playBeep() {
     osc.stop(ctx.currentTime + 0.15);
 }
 
-/* ===== LOGIN ===== */
+/* LOGIN */
 function login() {
     if (username.value === ADMIN_USER && password.value === ADMIN_PASS) {
         localStorage.setItem("loggedIn", "true");
@@ -198,45 +188,48 @@ function logout() {
 function showAdmin() {
     loginPage.classList.add("hidden");
     adminPage.classList.remove("hidden");
-
     datePicker.value = new Date().toISOString().split("T")[0];
-
     loadTable();
     startScanner();
 }
 
-/* ===== QR SCAN ===== */
-function onScanSuccess(qrText) {
-    if (Date.now() - lastScan < SCAN_DELAY) return;
-    lastScan = Date.now();
+/* QR SCAN */
+function onScanSuccess(text) {
+    const now = Date.now();
+    if (now - lastScanTime < SCAN_DELAY) return;
+    lastScanTime = now;
 
-    if (!qrText.startsWith(SECTION_PREFIX)) {
-        alert("INVALID QR CODE\nOnly ICTE1 students are allowed.");
+    if (!text.startsWith(PREFIX)) {
+        alert("INVALID QR CODE\nOnly ICTE1 students allowed.");
         return;
     }
 
-    playBeep();
+    beep();
 
-    const studentName = qrText.replace(SECTION_PREFIX, "").trim();
+    const name = text.replace(PREFIX, "").trim();
     const date = datePicker.value;
     const logbook = getLogbook();
 
     if (!logbook[date]) logbook[date] = {};
 
-    if (!logbook[date][studentName]) {
-        logbook[date][studentName] = {
-            timeIn: new Date().toLocaleTimeString(),
-            timeOut: ""
+    if (!logbook[date][name]) {
+        const studentCount = Object.keys(logbook[date]).length + 1;
+        const pcNumber = Math.ceil(studentCount / 2);
+
+        logbook[date][name] = {
+            pc: pcNumber,
+            in: new Date().toLocaleTimeString(),
+            out: ""
         };
-    } else if (!logbook[date][studentName].timeOut) {
-        logbook[date][studentName].timeOut = new Date().toLocaleTimeString();
+    } else if (!logbook[date][name].out) {
+        logbook[date][name].out = new Date().toLocaleTimeString();
     }
 
     saveLogbook(logbook);
     loadTable();
 }
 
-/* ===== TABLE ===== */
+/* TABLE (2 STUDENTS PER ROW) */
 function loadTable() {
     const logbook = getLogbook();
     const date = datePicker.value;
@@ -244,53 +237,47 @@ function loadTable() {
 
     if (!logbook[date]) return;
 
-    for (let name in logbook[date]) {
-        const r = logbook[date][name];
+    const names = Object.keys(logbook[date]);
+
+    for (let i = 0; i < names.length; i += 2) {
+        const n1 = names[i];
+        const r1 = logbook[date][n1];
+
+        const n2 = names[i + 1];
+        const r2 = n2 ? logbook[date][n2] : null;
+
         records.innerHTML += `
         <tr>
-            <td>${name}</td>
-            <td>${r.timeIn}</td>
-            <td>${r.timeOut}</td>
+            <td>${n1}</td>
+            <td>${r1.pc}</td>
+            <td>${r1.in}</td>
+            <td>${r1.out}</td>
+
+            <td>${n2 || ""}</td>
+            <td>${r2 ? r2.pc : ""}</td>
+            <td>${r2 ? r2.in : ""}</td>
+            <td>${r2 ? r2.out : ""}</td>
         </tr>`;
     }
 }
 
 datePicker.addEventListener("change", loadTable);
 
-/* ===== SCANNER ===== */
+/* CAMERA */
 function startScanner() {
-    html5QrCode = new Html5Qrcode("reader");
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        onScanSuccess
-    );
+    const qr = new Html5Qrcode("reader");
+    Html5Qrcode.getCameras().then(devices => {
+        if (devices.length) {
+            qr.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                onScanSuccess
+            );
+        }
+    });
 }
 
-/* ===== EXPORT ===== */
-function exportToExcel() {
-    const logbook = getLogbook();
-    const date = datePicker.value;
-
-    if (!logbook[date]) {
-        alert("No data for selected date");
-        return;
-    }
-
-    let csv = "Student Name,Time In,Time Out\n";
-    for (let name in logbook[date]) {
-        const r = logbook[date][name];
-        csv += `${name},${r.timeIn},${r.timeOut}\n`;
-    }
-
-    const blob = new Blob([csv], { type: "text/csv" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `ICTE1_Logbook_${date}.csv`;
-    link.click();
-}
-
-/* ===== AUTO LOGIN ===== */
+/* AUTO LOGIN */
 if (localStorage.getItem("loggedIn") === "true") {
     showAdmin();
 }
