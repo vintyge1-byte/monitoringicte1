@@ -97,7 +97,7 @@ td {
 
 <!-- HEADER -->
 <div class="header">
-    <img src="logo.png">
+    <img src="logo.png" alt="School Logo">
     <div class="header-text">
         <div class="top">Republic of the Philippines</div>
         <div class="top">JBEST School of Technology and Practical Skills, Inc.</div>
@@ -122,6 +122,7 @@ td {
     <input type="date" id="datePicker"><br><br>
 
     <button onclick="logout()">Logout</button>
+    <button onclick="exportToExcel()">Export to Excel</button>
 
     <div id="reader"></div>
 
@@ -149,8 +150,8 @@ const ADMIN_USER = "Researchers";
 const ADMIN_PASS = "AABDHJJJJJMRV";
 const PREFIX = "ICTE1 ";
 const SCAN_DELAY = 3000; // 3 seconds delay
-
 let lastScanTime = 0;
+let html5QrCode;
 
 /* STORAGE */
 function getLogbook() {
@@ -182,6 +183,7 @@ function login() {
 
 function logout() {
     localStorage.removeItem("loggedIn");
+    stopScanner();
     location.reload();
 }
 
@@ -214,7 +216,7 @@ function onScanSuccess(text) {
 
     if (!logbook[date][name]) {
         const studentCount = Object.keys(logbook[date]).length + 1;
-        const pcNumber = Math.ceil(studentCount / 2);
+        const pcNumber = Math.ceil(studentCount / 2); // 2 students share 1 PC
 
         logbook[date][name] = {
             pc: pcNumber,
@@ -229,7 +231,7 @@ function onScanSuccess(text) {
     loadTable();
 }
 
-/* TABLE (2 STUDENTS PER ROW) */
+/* TABLE */
 function loadTable() {
     const logbook = getLogbook();
     const date = datePicker.value;
@@ -263,18 +265,52 @@ function loadTable() {
 
 datePicker.addEventListener("change", loadTable);
 
+/* EXPORT TO EXCEL */
+function exportToExcel() {
+    const logbook = getLogbook();
+    const date = datePicker.value;
+    if (!logbook[date]) {
+        alert("No data for this date.");
+        return;
+    }
+
+    let csv = "Student Name,PC No,Time In,Time Out\n";
+    for (let name in logbook[date]) {
+        const r = logbook[date][name];
+        csv += `${name},${r.pc},${r.in},${r.out}\n`;
+    }
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `ICTE1_Logbook_${date}.csv`;
+    link.click();
+}
+
 /* CAMERA */
 function startScanner() {
-    const qr = new Html5Qrcode("reader");
+    html5QrCode = new Html5Qrcode("reader");
     Html5Qrcode.getCameras().then(devices => {
         if (devices.length) {
-            qr.start(
+            html5QrCode.start(
                 { facingMode: "environment" },
                 { fps: 10, qrbox: 250 },
                 onScanSuccess
-            );
+            ).catch(err => {
+                console.log("Camera start error:", err);
+            });
+        } else {
+            alert("No camera found on this device.");
         }
+    }).catch(err => {
+        console.log("Camera access error:", err);
     });
+}
+
+function stopScanner() {
+    if (html5QrCode) {
+        html5QrCode.stop().catch(()=>{});
+    }
 }
 
 /* AUTO LOGIN */
