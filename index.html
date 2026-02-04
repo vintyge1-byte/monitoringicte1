@@ -2,21 +2,23 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>ICT E1 QR Time Monitoring</title>
+<title>ICT E1 QR Time Monitoring System</title>
+
+<!-- QR Scanner Library -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
 body {
     margin: 0;
     font-family: Arial, sans-serif;
-    background: linear-gradient(to bottom right, #eef2ff, #f8fafc);
+    background: linear-gradient(to bottom right, #f1f5f9, #e2e8f0);
 }
 
 /* HEADER */
 .header {
     display: flex;
     align-items: center;
-    padding: 15px 25px;
+    padding: 15px;
     background: white;
     border-bottom: 3px solid #2563eb;
 }
@@ -30,44 +32,52 @@ body {
 }
 
 .header-text .top {
-    font-weight: bold;
-    font-size: 15px;
+    font-size: 14px;
 }
 
 .header-text .middle {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.header-text .bottom {
     font-size: 14px;
 }
 
 /* CONTAINER */
 .container {
-    max-width: 1100px;
-    margin: 25px auto;
+    max-width: 1000px;
+    margin: 30px auto;
     background: white;
     padding: 25px;
     border-radius: 12px;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
     text-align: center;
 }
 
-.hidden { display: none; }
+.hidden {
+    display: none;
+}
 
 input, button {
-    padding: 8px;
-    margin: 5px;
+    padding: 10px;
+    margin: 6px;
+    border-radius: 6px;
+    border: 1px solid #cbd5f5;
 }
 
 button {
     background: #2563eb;
     color: white;
-    border: none;
-    border-radius: 5px;
     cursor: pointer;
+    border: none;
 }
 
 button:hover {
     background: #1e40af;
 }
 
+/* QR */
 #reader {
     width: 320px;
     margin: 20px auto;
@@ -83,12 +93,12 @@ table {
 th {
     background: #2563eb;
     color: white;
-    padding: 8px;
+    padding: 10px;
 }
 
 td {
     padding: 8px;
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid #e5e7eb;
 }
 </style>
 </head>
@@ -100,12 +110,12 @@ td {
     <img src="logo.png" alt="School Logo">
     <div class="header-text">
         <div class="top">Republic of the Philippines</div>
-        <div class="top">JBEST School of Technology and Practical Skills, Inc.</div>
-        <div class="middle">Cubao, Quezon City</div>
+        <div class="middle">JBEST School of Technology and Practical Skills, Inc.</div>
+        <div class="bottom">Cubao, Quezon City</div>
     </div>
 </div>
 
-<!-- LOGIN -->
+<!-- LOGIN PAGE -->
 <div id="loginPage" class="container">
     <h2>Admin Login</h2>
     <input id="username" placeholder="Username"><br>
@@ -114,9 +124,9 @@ td {
     <p id="error" style="color:red;"></p>
 </div>
 
-<!-- ADMIN -->
+<!-- ADMIN PAGE -->
 <div id="adminPage" class="container hidden">
-    <h2>ICT E1 Student Time Monitoring</h2>
+    <h2>ICT E1 QR Time Monitoring</h2>
 
     <label>Select Date:</label>
     <input type="date" id="datePicker"><br><br>
@@ -129,13 +139,13 @@ td {
     <table>
         <thead>
             <tr>
-                <th>Student Name</th>
                 <th>PC No.</th>
+                <th>Student Name</th>
                 <th>Time In</th>
                 <th>Time Out</th>
 
-                <th>Student Name</th>
                 <th>PC No.</th>
+                <th>Student Name</th>
                 <th>Time In</th>
                 <th>Time Out</th>
             </tr>
@@ -149,9 +159,10 @@ td {
 const ADMIN_USER = "Researchers";
 const ADMIN_PASS = "AABDHJJJJJMRV";
 const PREFIX = "ICTE1 ";
-const SCAN_DELAY = 3000; // 3 seconds delay
+const SCAN_DELAY = 3000; // 3 Seconds Delay
+
 let lastScanTime = 0;
-let html5QrCode;
+let qr;
 
 /* STORAGE */
 function getLogbook() {
@@ -183,7 +194,6 @@ function login() {
 
 function logout() {
     localStorage.removeItem("loggedIn");
-    stopScanner();
     location.reload();
 }
 
@@ -195,14 +205,14 @@ function showAdmin() {
     startScanner();
 }
 
-/* QR SCAN */
+/* SCAN SUCCESS */
 function onScanSuccess(text) {
     const now = Date.now();
     if (now - lastScanTime < SCAN_DELAY) return;
     lastScanTime = now;
 
     if (!text.startsWith(PREFIX)) {
-        alert("INVALID QR CODE\nOnly ICTE1 students allowed.");
+        alert("INVALID QR CODE\nICTE1 students only.");
         return;
     }
 
@@ -214,17 +224,19 @@ function onScanSuccess(text) {
 
     if (!logbook[date]) logbook[date] = {};
 
+    // TIME IN
     if (!logbook[date][name]) {
-        const studentCount = Object.keys(logbook[date]).length + 1;
-        const pcNumber = Math.ceil(studentCount / 2); // 2 students share 1 PC
-
         logbook[date][name] = {
-            pc: pcNumber,
+            pc: "",
             in: new Date().toLocaleTimeString(),
             out: ""
         };
-    } else if (!logbook[date][name].out) {
+    }
+    // TIME OUT
+    else if (!logbook[date][name].out) {
+        const finished = Object.values(logbook[date]).filter(s => s.out !== "").length + 1;
         logbook[date][name].out = new Date().toLocaleTimeString();
+        logbook[date][name].pc = Math.ceil(finished / 2); // 2 students per PC
     }
 
     saveLogbook(logbook);
@@ -239,78 +251,60 @@ function loadTable() {
 
     if (!logbook[date]) return;
 
-    const names = Object.keys(logbook[date]);
+    const students = Object.keys(logbook[date]);
 
-    for (let i = 0; i < names.length; i += 2) {
-        const n1 = names[i];
-        const r1 = logbook[date][n1];
-
-        const n2 = names[i + 1];
-        const r2 = n2 ? logbook[date][n2] : null;
+    for (let i = 0; i < students.length; i += 2) {
+        const s1 = logbook[date][students[i]];
+        const s2 = logbook[date][students[i + 1]];
 
         records.innerHTML += `
         <tr>
-            <td>${n1}</td>
-            <td>${r1.pc}</td>
-            <td>${r1.in}</td>
-            <td>${r1.out}</td>
+            <td>${s1 ? s1.pc : ""}</td>
+            <td>${students[i]}</td>
+            <td>${s1.in}</td>
+            <td>${s1.out}</td>
 
-            <td>${n2 || ""}</td>
-            <td>${r2 ? r2.pc : ""}</td>
-            <td>${r2 ? r2.in : ""}</td>
-            <td>${r2 ? r2.out : ""}</td>
+            <td>${s2 ? s2.pc : ""}</td>
+            <td>${students[i + 1] || ""}</td>
+            <td>${s2 ? s2.in : ""}</td>
+            <td>${s2 ? s2.out : ""}</td>
         </tr>`;
     }
 }
 
 datePicker.addEventListener("change", loadTable);
 
-/* EXPORT TO EXCEL */
+/* SCANNER */
+function startScanner() {
+    qr = new Html5Qrcode("reader");
+    qr.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: 250 },
+        onScanSuccess
+    );
+}
+
+/* EXPORT */
 function exportToExcel() {
     const logbook = getLogbook();
     const date = datePicker.value;
+
     if (!logbook[date]) {
-        alert("No data for this date.");
+        alert("No data");
         return;
     }
 
-    let csv = "Student Name,PC No,Time In,Time Out\n";
+    let csv = "PC No,Student Name,Time In,Time Out\n";
     for (let name in logbook[date]) {
         const r = logbook[date][name];
-        csv += `${name},${r.pc},${r.in},${r.out}\n`;
+        csv += `${r.pc},${name},${r.in},${r.out}\n`;
     }
 
     const blob = new Blob([csv], { type: "text/csv" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `ICTE1_Logbook_${date}.csv`;
-    link.click();
-}
-
-/* CAMERA */
-function startScanner() {
-    html5QrCode = new Html5Qrcode("reader");
-    Html5Qrcode.getCameras().then(devices => {
-        if (devices.length) {
-            html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
-                onScanSuccess
-            ).catch(err => {
-                console.log("Camera start error:", err);
-            });
-        } else {
-            alert("No camera found on this device.");
-        }
-    }).catch(err => {
-        console.log("Camera access error:", err);
-    });
-}
-
-function stopScanner() {
-    if (html5QrCode) {
-        html5QrCode.stop().catch(()=>{});
-    }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `ICTE1_Logbook_${date}.csv`;
+    a.click();
 }
 
 /* AUTO LOGIN */
