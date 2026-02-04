@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <title>ICT E1 QR Time Monitoring System</title>
 
-<!-- QR Scanner Library -->
 <script src="https://unpkg.com/html5-qrcode"></script>
 
 <style>
@@ -14,11 +13,10 @@ body {
     background: linear-gradient(to bottom right, #f1f5f9, #e2e8f0);
 }
 
-/* HEADER */
 .header {
     display: flex;
     align-items: center;
-    padding: 15px;
+    padding: 15px 25px;
     background: white;
     border-bottom: 3px solid #2563eb;
 }
@@ -31,33 +29,17 @@ body {
     margin-left: 15px;
 }
 
-.header-text .top {
-    font-size: 14px;
-}
-
-.header-text .middle {
-    font-size: 18px;
-    font-weight: bold;
-}
-
-.header-text .bottom {
-    font-size: 14px;
-}
-
-/* CONTAINER */
 .container {
-    max-width: 1000px;
-    margin: 30px auto;
+    max-width: 900px;
     background: white;
+    margin: 30px auto;
     padding: 25px;
     border-radius: 12px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.08);
     text-align: center;
 }
 
-.hidden {
-    display: none;
-}
+.hidden { display: none; }
 
 input, button {
     padding: 10px;
@@ -69,21 +51,19 @@ input, button {
 button {
     background: #2563eb;
     color: white;
-    cursor: pointer;
     border: none;
+    cursor: pointer;
 }
 
 button:hover {
     background: #1e40af;
 }
 
-/* QR */
 #reader {
     width: 320px;
     margin: 20px auto;
 }
 
-/* TABLE */
 table {
     width: 100%;
     border-collapse: collapse;
@@ -109,13 +89,13 @@ td {
 <div class="header">
     <img src="logo.png" alt="School Logo">
     <div class="header-text">
-        <div class="top">Republic of the Philippines</div>
-        <div class="middle">JBEST School of Technology and Practical Skills, Inc.</div>
-        <div class="bottom">Cubao, Quezon City</div>
+        <div>Republic of the Philippines</div>
+        <strong>JBEST School of Technology and Practical Skills, Inc.</strong>
+        <div>Cubao, Quezon City</div>
     </div>
 </div>
 
-<!-- LOGIN PAGE -->
+<!-- LOGIN -->
 <div id="loginPage" class="container">
     <h2>Admin Login</h2>
     <input id="username" placeholder="Username"><br>
@@ -124,9 +104,9 @@ td {
     <p id="error" style="color:red;"></p>
 </div>
 
-<!-- ADMIN PAGE -->
+<!-- ADMIN -->
 <div id="adminPage" class="container hidden">
-    <h2>ICT E1 QR Time Monitoring</h2>
+    <h2>ICT E1 Student Time Monitoring</h2>
 
     <label>Select Date:</label>
     <input type="date" id="datePicker"><br><br>
@@ -139,13 +119,8 @@ td {
     <table>
         <thead>
             <tr>
-                <th>PC No.</th>
                 <th>Student Name</th>
-                <th>Time In</th>
-                <th>Time Out</th>
-
                 <th>PC No.</th>
-                <th>Student Name</th>
                 <th>Time In</th>
                 <th>Time Out</th>
             </tr>
@@ -155,16 +130,17 @@ td {
 </div>
 
 <script>
-/* CONFIG */
+/* ===== CONFIG ===== */
 const ADMIN_USER = "Researchers";
 const ADMIN_PASS = "AABDHJJJJJMRV";
 const PREFIX = "ICTE1 ";
-const SCAN_DELAY = 3000; // 3 Seconds Delay
+const SCAN_DELAY = 3000;
 
-let lastScanTime = 0;
-let qr;
+/* ===== GLOBAL ===== */
+let html5QrCode;
+let lastScan = 0;
 
-/* STORAGE */
+/* ===== STORAGE ===== */
 function getLogbook() {
     return JSON.parse(localStorage.getItem("logbook")) || {};
 }
@@ -172,7 +148,7 @@ function saveLogbook(data) {
     localStorage.setItem("logbook", JSON.stringify(data));
 }
 
-/* BEEP */
+/* ===== BEEP ===== */
 function beep() {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
     const osc = ctx.createOscillator();
@@ -182,7 +158,7 @@ function beep() {
     osc.stop(ctx.currentTime + 0.15);
 }
 
-/* LOGIN */
+/* ===== LOGIN ===== */
 function login() {
     if (username.value === ADMIN_USER && password.value === ADMIN_PASS) {
         localStorage.setItem("loggedIn", "true");
@@ -205,14 +181,13 @@ function showAdmin() {
     startScanner();
 }
 
-/* SCAN SUCCESS */
+/* ===== QR SCAN ===== */
 function onScanSuccess(text) {
-    const now = Date.now();
-    if (now - lastScanTime < SCAN_DELAY) return;
-    lastScanTime = now;
+    if (Date.now() - lastScan < SCAN_DELAY) return;
+    lastScan = Date.now();
 
     if (!text.startsWith(PREFIX)) {
-        alert("INVALID QR CODE\nICTE1 students only.");
+        alert("INVALID QR CODE\nOnly ICTE1 students allowed.");
         return;
     }
 
@@ -232,18 +207,25 @@ function onScanSuccess(text) {
             out: ""
         };
     }
-    // TIME OUT
+    // TIME OUT + MANUAL PC INPUT
     else if (!logbook[date][name].out) {
-        const finished = Object.values(logbook[date]).filter(s => s.out !== "").length + 1;
+
+        const pc = prompt("Enter PC Number used by the student:");
+
+        if (!pc) {
+            alert("PC number is required!");
+            return;
+        }
+
         logbook[date][name].out = new Date().toLocaleTimeString();
-        logbook[date][name].pc = Math.ceil(finished / 2); // 2 students per PC
+        logbook[date][name].pc = pc;
     }
 
     saveLogbook(logbook);
     loadTable();
 }
 
-/* TABLE */
+/* ===== TABLE ===== */
 function loadTable() {
     const logbook = getLogbook();
     const date = datePicker.value;
@@ -251,63 +233,55 @@ function loadTable() {
 
     if (!logbook[date]) return;
 
-    const students = Object.keys(logbook[date]);
-
-    for (let i = 0; i < students.length; i += 2) {
-        const s1 = logbook[date][students[i]];
-        const s2 = logbook[date][students[i + 1]];
-
+    for (let name in logbook[date]) {
+        const r = logbook[date][name];
         records.innerHTML += `
         <tr>
-            <td>${s1 ? s1.pc : ""}</td>
-            <td>${students[i]}</td>
-            <td>${s1.in}</td>
-            <td>${s1.out}</td>
-
-            <td>${s2 ? s2.pc : ""}</td>
-            <td>${students[i + 1] || ""}</td>
-            <td>${s2 ? s2.in : ""}</td>
-            <td>${s2 ? s2.out : ""}</td>
+            <td>${name}</td>
+            <td>${r.pc}</td>
+            <td>${r.in}</td>
+            <td>${r.out}</td>
         </tr>`;
     }
 }
 
 datePicker.addEventListener("change", loadTable);
 
-/* SCANNER */
+/* ===== SCANNER ===== */
 function startScanner() {
-    qr = new Html5Qrcode("reader");
-    qr.start(
+    html5QrCode = new Html5Qrcode("reader");
+    html5QrCode.start(
         { facingMode: "environment" },
         { fps: 10, qrbox: 250 },
         onScanSuccess
     );
 }
 
-/* EXPORT */
+/* ===== EXPORT ===== */
 function exportToExcel() {
     const logbook = getLogbook();
     const date = datePicker.value;
 
     if (!logbook[date]) {
-        alert("No data");
+        alert("No records found.");
         return;
     }
 
-    let csv = "PC No,Student Name,Time In,Time Out\n";
+    let csv = "Student Name,PC No,Time In,Time Out\n";
+
     for (let name in logbook[date]) {
         const r = logbook[date][name];
-        csv += `${r.pc},${name},${r.in},${r.out}\n`;
+        csv += `${name},${r.pc},${r.in},${r.out}\n`;
     }
 
     const blob = new Blob([csv], { type: "text/csv" });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `ICTE1_Logbook_${date}.csv`;
-    a.click();
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `ICTE1_Logbook_${date}.csv`;
+    link.click();
 }
 
-/* AUTO LOGIN */
+/* ===== AUTO LOGIN ===== */
 if (localStorage.getItem("loggedIn") === "true") {
     showAdmin();
 }
